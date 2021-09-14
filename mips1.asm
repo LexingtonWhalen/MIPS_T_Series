@@ -12,6 +12,7 @@
 	lnPrompt:	.asciiz "Welcome to ln\n"
 	
 	zeroDouble:	.double	0.0
+	oneDouble: 	.double 1.0
 	piDouble: 	.double 3.1415927
 	oneEightyDouble: .double 180.0
 .text
@@ -44,54 +45,7 @@
 			j while
 		endoperation:
 			j while
-	
-	getDegree:
-		# returns the degree amount in $f0
-		addi $sp, $sp, -4
-		sw $ra, 0($sp)
-		
-		la $a0, degPrompt
-		jal printText
-		
-		# get double in $f0
-		jal getDouble
-		
-		
-		lw $ra, 0($sp)
-		addi $sp, $sp, 4
-		
-		jr $ra
-		
-	convertDegRad:
-		addi $sp, $sp, -4
-		sw $ra, 0($sp)
-		
-		la $a0, radConversion
-		jal printText
-		
-		# NOTE: PUSH TO STACK
-		ldc1 $f10, piDouble
-		# rad = (pi/180)*deg
-		
-		# pi * deg
-		mul.d $f0, $f0, $f10
-		
-		ldc1 $f10, oneEightyDouble
-		# 1/180
-		
-		li $v0, 3
-		ldc1 $f10, zeroDouble
-		add.d $f12, $f0, $f10
-		syscall
-		
-		jal printNewLine
-		
-		
-		lw $ra, 0($sp)
-		addi $sp, $sp, 4
-		
-		jr $ra
-		
+
 	handleSine:
 		addi $sp, $sp, -4
 		sw $ra, 0($sp)
@@ -105,6 +59,22 @@
 		
 		lw $ra, 0($sp)
 		addi $sp,$sp, 4
+		
+		j endoperation
+		
+	handleCosine:
+		addi $sp, $sp, -4
+		sw $ra, 0($sp)
+		
+		la $a0, cosinePrompt
+		jal printText
+		
+		jal getDegree
+		# convert $f0 degree into radians
+		jal convertDegRad
+		
+		lw $ra, 0($sp)
+		addi $sp, $sp, 4
 		
 		j endoperation
 			
@@ -131,18 +101,6 @@
 		addi $sp, $sp, 4
 		
 		j endoperation
-			
-	handleCosine:
-		addi $sp, $sp, -4
-		sw $ra, 0($sp)
-		
-		la $a0, cosinePrompt
-		jal printText
-		
-		lw $ra, 0($sp)
-		addi $sp, $sp, 4
-		
-		j endoperation
 		
 	
 	getInt:
@@ -158,6 +116,121 @@
 		# get the double, store in $f0
 		li $v0, 7
 		syscall
+		
+		jr $ra
+		
+	getDegree:
+		# returns the degree amount in $f0
+		addi $sp, $sp, -4
+		sw $ra, 0($sp)
+		
+		la $a0, degPrompt
+		jal printText
+		
+		# get double in $f0
+		jal getDouble
+		
+		jal doubleFact
+		
+		
+		lw $ra, 0($sp)
+		addi $sp, $sp, 4
+		
+		jr $ra
+		
+	doubleFact:
+		# reads in $f0, returns in $f0 as well
+		
+		# if $f0 > 1, recurse
+		addi $sp, $sp, -8
+		sdc1 $f10, 0($sp)
+		
+		#ldc1 $f10, oneDouble
+		# check less than or equal, if false go to doubleFactRecurse
+		#c.le.d $f0, $f10
+		#bc1f doubleFactRecurse
+		# else return 1
+		#add.d $f0, $f0, $f10
+		
+		ldc1 $f10, 0($sp)
+		addi $sp, $sp, 8
+		
+		jr $ra
+		
+	doubleFactRecurse:
+		# store arg and ra
+		addi $sp, $sp, -20
+		sw $ra, 0($sp)
+		sdc1 $f0, 4($sp)
+		sdc1 $f10, 12($sp)
+		
+		# call fib n-1
+		ldc1 $f10, oneDouble
+		sub.d $f0,$f0,$f10
+		jal doubleFact
+		
+		# get f10 from n-1 again
+		ldc1 $f10, zeroDouble
+		add.d $f10, $f10, $f0
+		
+		lw $ra, 0($sp)
+		ldc1 $f0, 4($sp)
+		sdc1 $f10, 12($sp)
+		addi $sp, $sp, 20
+		
+		#return fact(n-1)*n
+		mul.d $f0, $f0, $f10
+		
+		jr $ra
+		
+		
+	convertDegRad:
+		addi $sp, $sp, -20
+		sw $ra, 0($sp)
+		sdc1 $f10, 4($sp)
+		sdc1 $f12, 12($sp)
+		
+		la $a0, radConversion
+		jal printText
+		
+		ldc1 $f10, piDouble
+		# rad = (pi/180)*deg
+		
+		# pi * deg
+		mul.d $f0, $f0, $f10
+		
+		ldc1 $f10, oneEightyDouble
+		# 1/180
+		div.d $f0, $f0, $f10
+		
+		li $v0, 3
+		ldc1 $f10, zeroDouble
+		add.d $f12, $f0, $f10
+		syscall
+		
+		jal printNewLine
+		
+		lw $ra, 0($sp)
+		ldc1 $f10,4($sp)
+		ldc1 $f12, 12($sp)
+		addi $sp, $sp, 20
+		
+		jr $ra
+	printDouble:
+		# prints the double found in $f0
+		addi $sp, $sp, -16
+		sdc1 $f12, 0($sp)
+		sdc1 $f10, 8($sp)
+		
+		ldc1 $f10, zeroDouble
+		
+		li $v0, 3
+		add.d $f12,$f0, $f10
+		syscall
+		
+		lwc1 $f12, 0($sp)
+		lwc1 $f10, 8($sp)
+		addi $sp, $sp, 16
 		
 		jr $ra
 		
