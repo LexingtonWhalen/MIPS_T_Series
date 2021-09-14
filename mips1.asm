@@ -1,64 +1,163 @@
 .data
+	welcome:	.asciiz "Welcome!\n"
+	instructions:	.asciiz "0: Sine(x)\n1: Cosine(x)\n2: e^x\n3: ln(x)\n-1: quit\n"
 	goodbye:	.asciiz "\nGoodbye!"
-	promptDeg:	.asciiz "Enter a degree amount: "
+	degPrompt:	.asciiz "Enter a degree amount:\n"
+	radConversion:	.asciiz "In radians, this is: "
 	newLine:	.asciiz "\n"
-	zeroFloat:	.float	0.0
+	
+	sinePrompt:	.asciiz "Welcome to sine\n"
+	cosinePrompt:	.asciiz "Welcome to cosine\n"
+	ePrompt:	.asciiz "Welcome to e\n"
+	lnPrompt:	.asciiz "Welcome to ln\n"
+	
+	zeroDouble:	.double	0.0
+	piDouble: 	.double 3.1415927
+	oneEightyDouble: .double 180.0
 .text
 
-	main:
+	main:	la $a0, welcome
+		jal printText
+		while:
 		
-		la $a0, promptDeg
+			la $a0, instructions
+			jal printText
+		
+			jal getInt
+		
+			# check the value returned in $v0
+			li $t0, 0
+			beq $t0, $v0, handleSine
+			
+			li $t0, 1
+			beq $t0, $v0, handleCosine
+			
+			li $t0, 2
+			beq $t0, $v0, handleE
+			
+			li $t0, 3
+			beq $t0, $v0, handleLn
+		
+			li $t0, -1
+			beq $t0, $v0, exit
+		
+			j while
+		endoperation:
+			j while
+	
+	getDegree:
+		# returns the degree amount in $f0
+		addi $sp, $sp, -4
+		sw $ra, 0($sp)
+		
+		la $a0, degPrompt
 		jal printText
 		
-		jal getFloat
+		# get double in $f0
+		jal getDouble
 		
-		
-		j exit
-		
-	printFloat:
-		# prints the float found in $f0, the argument float
-		addi $sp, $sp, -16
-		sw $ra, 0($sp)
-		swc1 $f2, 4($sp)
-		sw $v0, 8($sp)
-		swc1 $f12, 12($sp)
-		
-		# get a float of 0.0
-		lwc1 $f2, zeroFloat
-		
-		# display value
-		li $v0, 2
-		add.s $f12, $f0, $f2
-		syscall
 		
 		lw $ra, 0($sp)
-		lwc1 $f2, 4($sp)
-		lw $v0, 8($sp)
-		lwc1 $f12, 12($sp)
-		addi $sp, $sp, 16
+		addi $sp, $sp, 4
 		
 		jr $ra
-
 		
-		
-	getFloat:
-		# gets a float from user, returns in $f0
-		
-		# 8 bc 2*4 due to double
+	convertDegRad:
 		addi $sp, $sp, -4
-		swc1 $f2, 0($sp)
+		sw $ra, 0($sp)
 		
-		# load a double that is only for zeros
-		lwc1 $f2, zeroFloat
+		la $a0, radConversion
+		jal printText
 		
-		# read user input
-		li $v0, 6
+		# NOTE: PUSH TO STACK
+		ldc1 $f10, piDouble
+		# rad = (pi/180)*deg
+		
+		# pi * deg
+		mul.d $f0, $f0, $f10
+		
+		ldc1 $f10, oneEightyDouble
+		# 1/180
+		
+		li $v0, 3
+		ldc1 $f10, zeroDouble
+		add.d $f12, $f0, $f10
 		syscall
 		
-		jal printFloat
-
-		lwc1 $f2, 0($sp)
+		jal printNewLine
+		
+		
+		lw $ra, 0($sp)
 		addi $sp, $sp, 4
+		
+		jr $ra
+		
+	handleSine:
+		addi $sp, $sp, -4
+		sw $ra, 0($sp)
+		
+		la $a0, sinePrompt
+		jal printText
+		# get the degree in $f0
+		jal getDegree
+		# convert $f0 degree into radians
+		jal convertDegRad
+		
+		lw $ra, 0($sp)
+		addi $sp,$sp, 4
+		
+		j endoperation
+			
+	handleLn:
+		addi $sp, $sp, -4
+		sw $ra, 0($sp)
+		
+		la $a0, lnPrompt
+		jal printText
+		
+		lw $ra, 0($sp)
+		addi $sp, $sp, 4
+		
+		j endoperation
+			
+	handleE:
+		addi $sp, $sp, -4
+		sw $ra, 0($sp)
+		
+		la $a0, ePrompt
+		jal printText
+		
+		lw $ra, 0($sp)
+		addi $sp, $sp, 4
+		
+		j endoperation
+			
+	handleCosine:
+		addi $sp, $sp, -4
+		sw $ra, 0($sp)
+		
+		la $a0, cosinePrompt
+		jal printText
+		
+		lw $ra, 0($sp)
+		addi $sp, $sp, 4
+		
+		j endoperation
+		
+	
+	getInt:
+		# get the int,  store in $v0 
+		li $v0, 5
+		syscall
+		
+		jr $ra
+		
+	getDouble:
+		# returns a double in $f0
+	
+		# get the double, store in $f0
+		li $v0, 7
+		syscall
 		
 		jr $ra
 		
