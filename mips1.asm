@@ -1,6 +1,6 @@
 .data
 	welcome:	.asciiz "Welcome!\n"
-	instructions:	.asciiz "0: Sine(x)\n1: Cosine(x)\n2: e^x\n3: ln(x)\n-1: quit\n"
+	instructions:	.asciiz "0: Sine(x)\n1: Cosine(x)\n2: e^x\n3: ln(x)\n4: Factorial(x)\n-1: quit\n"
 	goodbye:	.asciiz "\nGoodbye!"
 	degPrompt:	.asciiz "Enter a degree amount:\n"
 	radConversion:	.asciiz "In radians, this is: "
@@ -10,6 +10,7 @@
 	cosinePrompt:	.asciiz "Welcome to cosine\n"
 	ePrompt:	.asciiz "Welcome to e\n"
 	lnPrompt:	.asciiz "Welcome to ln\n"
+	factPrompt:	.asciiz "Welcome to fact\n"
 	
 	zeroDouble:	.double	0.0
 	oneDouble: 	.double 1.0
@@ -38,6 +39,9 @@
 			
 			li $t0, 3
 			beq $t0, $v0, handleLn
+			
+			li $t0, 4
+			beq $t0, $v0, handleFact
 		
 			li $t0, -1
 			beq $t0, $v0, exit
@@ -45,10 +49,16 @@
 			j while
 		endoperation:
 			j while
+	
+	handleFact:
+		
+		jal getDouble
+		jal printDouble
+
+		
+		j endoperation
 
 	handleSine:
-		addi $sp, $sp, -4
-		sw $ra, 0($sp)
 		
 		la $a0, sinePrompt
 		jal printText
@@ -56,15 +66,11 @@
 		jal getDegree
 		# convert $f0 degree into radians
 		jal convertDegRad
-		
-		lw $ra, 0($sp)
-		addi $sp,$sp, 4
+	
 		
 		j endoperation
 		
 	handleCosine:
-		addi $sp, $sp, -4
-		sw $ra, 0($sp)
 		
 		la $a0, cosinePrompt
 		jal printText
@@ -73,36 +79,23 @@
 		# convert $f0 degree into radians
 		jal convertDegRad
 		
-		lw $ra, 0($sp)
-		addi $sp, $sp, 4
-		
 		j endoperation
 			
 	handleLn:
-		addi $sp, $sp, -4
-		sw $ra, 0($sp)
 		
 		la $a0, lnPrompt
 		jal printText
 		
-		lw $ra, 0($sp)
-		addi $sp, $sp, 4
-		
 		j endoperation
 			
 	handleE:
-		addi $sp, $sp, -4
-		sw $ra, 0($sp)
 		
 		la $a0, ePrompt
 		jal printText
-		
-		lw $ra, 0($sp)
-		addi $sp, $sp, 4
+
 		
 		j endoperation
 		
-	
 	getInt:
 		# get the int,  store in $v0 
 		li $v0, 5
@@ -121,8 +114,6 @@
 		
 	getDegree:
 		# returns the degree amount in $f0
-		addi $sp, $sp, -4
-		sw $ra, 0($sp)
 		
 		la $a0, degPrompt
 		jal printText
@@ -130,62 +121,53 @@
 		# get double in $f0
 		jal getDouble
 		
-		jal doubleFact
-		
-		
-		lw $ra, 0($sp)
-		addi $sp, $sp, 4
-		
 		jr $ra
 		
 	doubleFact:
 		# reads in $f0, returns in $f0 as well
 		
 		# if $f0 > 1, recurse
-		addi $sp, $sp, -8
+		addi $sp, $sp, -32
 		sdc1 $f10, 0($sp)
+		sdc1 $f4, 8($sp)
+		sdc1 $f6, 16($sp)
+		sdc1 $f8, 24($sp)
 		
-		#ldc1 $f10, oneDouble
-		# check less than or equal, if false go to doubleFactRecurse
-		#c.le.d $f0, $f10
-		#bc1f doubleFactRecurse
-		# else return 1
-		#add.d $f0, $f0, $f10
+		# the value of 1
+		ldc1 $f6, oneDouble
+		
+		# int fact = 1
+		ldc1 $f10, oneDouble
+		# keep track of n
+		ldc1 $f4, oneDouble
+		# zero double
+		ldc1 $f8, zeroDouble
+		
+		
+		doubleFactLoop: 
+			c.le.d $f10, $f0
+			# if not le, then gs
+			bc1f doubleFactLoopEnd
+			mul.d $f10, $f10, $f4
+			add.d $f4, $f4, $f6
+			
+		doubleFactLoopEnd:
+		# return $f0 = $f10
+		
+		add.d $f0, $f10, $f8
+		
+		jal printDouble
 		
 		ldc1 $f10, 0($sp)
-		addi $sp, $sp, 8
+		ldc1 $f4, 8($sp)
+		ldc1 $f6, 16($sp)
+		ldc1 $f8, 24($sp)
+		addi $sp, $sp, 32
 		
 		jr $ra
-		
-	doubleFactRecurse:
-		# store arg and ra
-		addi $sp, $sp, -20
-		sw $ra, 0($sp)
-		sdc1 $f0, 4($sp)
-		sdc1 $f10, 12($sp)
-		
-		# call fib n-1
-		ldc1 $f10, oneDouble
-		sub.d $f0,$f0,$f10
-		jal doubleFact
-		
-		# get f10 from n-1 again
-		ldc1 $f10, zeroDouble
-		add.d $f10, $f10, $f0
-		
-		lw $ra, 0($sp)
-		ldc1 $f0, 4($sp)
-		sdc1 $f10, 12($sp)
-		addi $sp, $sp, 20
-		
-		#return fact(n-1)*n
-		mul.d $f0, $f0, $f10
-		
-		jr $ra
-		
 		
 	convertDegRad:
-		addi $sp, $sp, -20
+		addi $sp, $sp, -24
 		sw $ra, 0($sp)
 		sdc1 $f10, 4($sp)
 		sdc1 $f12, 12($sp)
@@ -213,7 +195,7 @@
 		lw $ra, 0($sp)
 		ldc1 $f10,4($sp)
 		ldc1 $f12, 12($sp)
-		addi $sp, $sp, 20
+		addi $sp, $sp, -24
 		
 		jr $ra
 	printDouble:
