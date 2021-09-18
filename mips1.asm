@@ -52,10 +52,12 @@
 	
 	handleFact:
 		
+		la $a0, factPrompt
+		jal printText
+		
 		jal getDouble
 		jal printDouble
 
-		
 		j endoperation
 
 	handleSine:
@@ -66,7 +68,6 @@
 		jal getDegree
 		# convert $f0 degree into radians
 		jal convertDegRad
-	
 		
 		j endoperation
 		
@@ -114,12 +115,17 @@
 		
 	getDegree:
 		# returns the degree amount in $f0
+		addi $sp, $sp, -8
+		sw $ra, 0($sp)
 		
 		la $a0, degPrompt
 		jal printText
 		
 		# get double in $f0
 		jal getDouble
+		
+		lw $ra, 0($sp)
+		addi $sp, $sp, 8
 		
 		jr $ra
 		
@@ -169,8 +175,8 @@
 	convertDegRad:
 		addi $sp, $sp, -24
 		sw $ra, 0($sp)
-		sdc1 $f10, 4($sp)
-		sdc1 $f12, 12($sp)
+		sdc1 $f10, 8($sp)
+		sdc1 $f12, 16($sp)
 		
 		la $a0, radConversion
 		jal printText
@@ -193,16 +199,17 @@
 		jal printNewLine
 		
 		lw $ra, 0($sp)
-		ldc1 $f10,4($sp)
-		ldc1 $f12, 12($sp)
-		addi $sp, $sp, -24
+		ldc1 $f10,8($sp)
+		ldc1 $f12, 16($sp)
+		addi $sp, $sp, 24
 		
 		jr $ra
 	printDouble:
 		# prints the double found in $f0
-		addi $sp, $sp, -16
-		sdc1 $f12, 0($sp)
-		sdc1 $f10, 8($sp)
+		addi $sp, $sp, -24
+		sw $ra, 0($sp)
+		sdc1 $f12, 8($sp)
+		sdc1 $f10, 16($sp)
 		
 		ldc1 $f10, zeroDouble
 		
@@ -210,15 +217,16 @@
 		add.d $f12,$f0, $f10
 		syscall
 		
-		lwc1 $f12, 0($sp)
-		lwc1 $f10, 8($sp)
-		addi $sp, $sp, 16
+		lw $ra, 0($sp)
+		lwc1 $f12, 8($sp)
+		lwc1 $f10, 16($sp)
+		addi $sp, $sp, 24
 		
 		jr $ra
 		
 	printText:
 		# Shows the text passed into $a0.
-		addi $sp, $sp, -4
+		addi $sp, $sp, -8
 		sw $v0, 0($sp)
 		
 		# Display "Enter a degree amount"
@@ -226,7 +234,7 @@
 		syscall
 	
 		lw $v0, 0($sp)
-		addi $sp, $sp 4
+		addi $sp, $sp 8
 		
 		jr $ra
 		
