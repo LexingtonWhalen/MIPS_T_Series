@@ -2,15 +2,17 @@
 	welcome:	.asciiz "Welcome!\n"
 	instructions:	.asciiz "0: Sine(x)\n1: Cosine(x)\n2: e^x\n3: ln(x)\n4: Factorial(x)\n-1: quit\n"
 	goodbye:	.asciiz "\nGoodbye!"
-	degPrompt:	.asciiz "Enter a degree amount:\n"
 	radConversion:	.asciiz "In radians, this is: "
 	newLine:	.asciiz "\n"
 	
-	sinePrompt:	.asciiz "Welcome to sine\n"
-	cosinePrompt:	.asciiz "Welcome to cosine\n"
-	ePrompt:	.asciiz "Welcome to e\n"
-	lnPrompt:	.asciiz "Welcome to ln\n"
-	factPrompt:	.asciiz "Welcome to fact\n"
+	degPrompt:	.asciiz "Enter a degree amount:\n"
+	sinePrompt:	.asciiz "Welcome to sine.\n"
+	cosinePrompt:	.asciiz "Welcome to cosine.\n"
+	ePrompt:	.asciiz "Welcome to e.\n"
+	lnPrompt:	.asciiz "Welcome to ln.\n"
+	factPrompt:	.asciiz "Enter an integer for the factorial: "
+	
+	factOutput:	.asciiz "The factorial is: "
 	
 	zeroDouble:	.double	0.0
 	oneDouble: 	.double 1.0
@@ -60,7 +62,12 @@
 		jal getDouble
 		
 		jal doubleFact
+		
+		la $a0, factOutput
+		jal printText
+		
 		jal printDouble
+		jal printNewLine
 
 		j endoperation
 
@@ -74,6 +81,12 @@
 		jal convertDegRad
 		
 		j endoperation
+	
+	getSineTerm:
+		# gets a term for the sin T series
+		jr $ra
+	getExponent:
+		jr $ra
 		
 	handleCosine:
 		
