@@ -17,7 +17,9 @@
 	piDouble: 	.double 3.1415927
 	oneEightyDouble: .double 180.0
 .text
-
+	# set the stack pointer to a multiple of 8
+	andi $sp, $sp, 0xfffffff8
+	
 	main:	la $a0, welcome
 		jal printText
 		while:
@@ -56,6 +58,8 @@
 		jal printText
 		
 		jal getDouble
+		
+		jal doubleFact
 		jal printDouble
 
 		j endoperation
@@ -132,42 +136,44 @@
 	doubleFact:
 		# reads in $f0, returns in $f0 as well
 		
-		# if $f0 > 1, recurse
-		addi $sp, $sp, -32
-		sdc1 $f10, 0($sp)
-		sdc1 $f4, 8($sp)
-		sdc1 $f6, 16($sp)
-		sdc1 $f8, 24($sp)
+		addi $sp, $sp,-32
+		sw $ra, 0($sp)
+		sdc1 $f2, 8($sp)
+		sdc1 $f4, 16($sp)
+		sdc1 $f6, 24($sp)
 		
-		# the value of 1
+		# load the value 1 into f2, "count"
+		ldc1 $f2, oneDouble
+		
+		# load the value of 1 into f4, to keep track of n
+		ldc1 $f4, oneDouble
+		
+		# fact
 		ldc1 $f6, oneDouble
 		
-		# int fact = 1
-		ldc1 $f10, oneDouble
-		# keep track of n
-		ldc1 $f4, oneDouble
-		# zero double
-		ldc1 $f8, zeroDouble
-		
-		
-		doubleFactLoop: 
-			c.le.d $f10, $f0
-			# if not le, then gs
+		doubleFactLoop:
+			# set less than equal to 
+			c.le.d $f2,$f0
+			# if not less than , end loop
 			bc1f doubleFactLoopEnd
-			mul.d $f10, $f10, $f4
-			add.d $f4, $f4, $f6
+			# else, fact = fact * count
+			mul.d $f6, $f6, $f2
+			# i+=1
+			add.d $f2, $f2, $f4
+			
+			j doubleFactLoop
 			
 		doubleFactLoopEnd:
-		# return $f0 = $f10
+		# need a zero for add next
+		ldc1 $f4, zeroDouble
 		
-		add.d $f0, $f10, $f8
+		add.d $f0, $f6, $f4
+		# return $f0 = $f8
 		
-		jal printDouble
-		
-		ldc1 $f10, 0($sp)
-		ldc1 $f4, 8($sp)
-		ldc1 $f6, 16($sp)
-		ldc1 $f8, 24($sp)
+		lw $ra, 0($sp)
+		lwc1 $f2, 8($sp)
+		lwc1 $f4, 16($sp)
+		lwc1 $f6, 24($sp)
 		addi $sp, $sp, 32
 		
 		jr $ra
@@ -208,18 +214,17 @@
 		# prints the double found in $f0
 		addi $sp, $sp, -24
 		sw $ra, 0($sp)
-		sdc1 $f12, 8($sp)
-		sdc1 $f10, 16($sp)
-		
-		ldc1 $f10, zeroDouble
+		sdc1 $f10, 8($sp)
+		sdc1 $f12,16($sp)
 		
 		li $v0, 3
-		add.d $f12,$f0, $f10
+		ldc1 $f10, zeroDouble
+		add.d $f12, $f0, $f10
 		syscall
 		
 		lw $ra, 0($sp)
-		lwc1 $f12, 8($sp)
-		lwc1 $f10, 16($sp)
+		ldc1 $f10, 8($sp)
+		ldc1 $f10, 16($sp)
 		addi $sp, $sp, 24
 		
 		jr $ra
