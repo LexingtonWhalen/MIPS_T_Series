@@ -1,6 +1,6 @@
 .data
 	welcome:	.asciiz "Welcome!\n"
-	instructions:	.asciiz "0: Sine(x)\n1: Cosine(x)\n2: e^x\n3: ln(x)\n4: Factorial(x)\n-1: quit\n"
+	instructions:	.asciiz "0: Sine(x)\n1: Cosine(x)\n2: e^x\n3: ln(x)\n4: Factorial(x)\n5: Exponential(x)\n-1: quit\n"
 	goodbye:	.asciiz "\nGoodbye!"
 	radConversion:	.asciiz "In radians, this is: "
 	newLine:	.asciiz "\n"
@@ -11,6 +11,9 @@
 	ePrompt:	.asciiz "Welcome to e.\n"
 	lnPrompt:	.asciiz "Welcome to ln.\n"
 	factPrompt:	.asciiz "Enter an integer for the factorial: "
+	expPrompt:	.asciiz "This function returns x^n.\n"
+	getXPrompt:	.asciiz "Enter a double for x: "
+	getNPrompt:	.asciiz "Enter an integer for n: "
 	
 	factOutput:	.asciiz "The factorial is: "
 	
@@ -46,6 +49,9 @@
 			
 			li $t0, 4
 			beq $t0, $v0, handleFact
+			
+			li $t0, 5
+			beq $t0, $v0, handleExp
 		
 			li $t0, -1
 			beq $t0, $v0, exit
@@ -79,6 +85,32 @@
 		jal getDegree
 		# convert $f0 degree into radians
 		jal convertDegRad
+		
+		j endoperation
+	
+	handleExp:
+		la $a0, expPrompt
+		jal printText
+		
+		la $a0, getNPrompt
+		jal printText
+		
+		# get n
+		jal getDouble
+		# store n in f2
+		mov.d $f2, $f0
+		
+		la $a0, getXPrompt
+		jal printText
+		
+		# get x in f0
+		jal getDouble
+		
+		jal doubleExp
+		# print the exp
+		jal printDouble
+		# print the double x^n
+		jal printNewLine
 		
 		j endoperation
 	
@@ -145,6 +177,54 @@
 		addi $sp, $sp, 8
 		
 		jr $ra
+	
+	doubleExp:
+		# reads in $f0 (x) and $f2 (n)
+		# returns x^n in $f0
+		# res = 1
+		# double exp = x;
+		# for(int i=1;i<=n;i++){
+		# res *= x
+		
+		addi $sp, $sp, -32
+		sw $ra, 0($sp)
+		swc1 $f4, 8($sp)
+		swc1 $f6, 16($sp)
+		swc1 $f8, 24($sp)
+		
+		
+		# int i=1
+		ldc1 $f4, oneDouble
+		
+		# for adding 1
+		ldc1 $f6, oneDouble
+		
+		# result
+		ldc1 $f8, oneDouble
+		
+		# loop
+		doubleExpLoop:
+			# i > a terminates
+			c.le.d $f4, $f2
+			bc1f doubleExpLoopEnd
+
+			
+			mul.d $f8, $f8, $f0
+		
+			# i + 1
+			add.d $f4, $f4,$f6
+			j doubleExpLoop
+
+		doubleExpLoopEnd: mov.d $f0, $f8
+			
+		# NOTE: use ldc1!
+		lw $ra, 0($sp)
+		ldc1 $f4, 8($sp)
+		ldc1 $f6, 16($sp)
+		ldc1 $f8, 24($sp)
+		addi $sp, $sp, 32
+		
+		jr $ra
 		
 	doubleFact:
 		# reads in $f0, returns in $f0 as well
@@ -184,9 +264,9 @@
 		# return $f0 = $f8
 		
 		lw $ra, 0($sp)
-		lwc1 $f2, 8($sp)
-		lwc1 $f4, 16($sp)
-		lwc1 $f6, 24($sp)
+		ldc1 $f2, 8($sp)
+		ldc1 $f4, 16($sp)
+		ldc1 $f6, 24($sp)
 		addi $sp, $sp, 32
 		
 		jr $ra
