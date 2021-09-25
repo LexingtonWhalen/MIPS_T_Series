@@ -1,3 +1,7 @@
+# Written (with love) by Lex Whalen, 09/25/21
+# A program to calculate sine, cosine, e^x, x!, x^n.
+# All in MIPS!
+
 .data
 	welcome:	.asciiz "Welcome!\n"
 	instructions:	.asciiz "0: Sine(x)\n1: Cosine(x)\n2: e^x\n3: Factorial(x)\n4: Exponential(x)\n-1: quit\n"
@@ -112,7 +116,6 @@
 		# store x
 		sdc1 $f0, 32($sp)
 
-		
 		sineLoop:
 			# if n >= termCount exit
 			c.le.d $f2, $f4
@@ -199,11 +202,9 @@
 		# exp: $f0 is x, $f2 is n
 		ldc1 $f0, negOneDouble
 
-		
 		# -1^n in $f0
 		jal doubleExp
 
-		
 		# get 2
 		ldc1 $f10, twoDouble
 		# get 2n
@@ -216,18 +217,13 @@
 		# move -1^n to $f10 for storage
 		mov.d $f10, $f0
 
-
 		# call x^2n+1, note $f10 is 2n+1 already.Just load x from prior
 		ldc1 $f0, 8($sp)
 
 		jal doubleExp
 
-
 		# mult -1^n times x^(2n+1). Now we have the numerator!
 		mul.d $f10, $f10,$f0
-
-
-
 	
 		# recall $f2 has (2n+1)
 		# thus just get the factorial of that
@@ -235,12 +231,9 @@
 		# numerator in $f4
 		mov.d $f0, $f2
 		jal doubleFact
-	
-	
 
 		# now just divide!
 		div.d $f0, $f10, $f0
-
 	
 		lw $ra, 0($sp)
 		#ldc1 $f0, 8($sp)
@@ -251,7 +244,6 @@
 		
 		jr $ra
 		
-		
 	handleCosine:
 		
 		addi $sp, $sp, -40
@@ -259,8 +251,6 @@
 		sdc1 $f4, 8($sp)
 		sdc1 $f6, 16($sp)
 		sdc1 $f10, 24($sp)
-		
-
 		
 		la $a0, cosinePrompt
 		jal printText
@@ -359,9 +349,6 @@
 
 		# mult -1^n times x^(2n). Now we have the numerator!
 		mul.d $f10, $f10,$f0
-
-
-
 	
 		# recall $f2 has (2n)
 		# thus just get the factorial of that
@@ -369,8 +356,6 @@
 		# numerator in $f4
 		mov.d $f0, $f2
 		jal doubleFact
-	
-	
 
 		# now just divide!
 		div.d $f0, $f10, $f0
@@ -564,8 +549,6 @@
 		ldc1 $f6, 16($sp)
 		ldc1 $f8, 24($sp)
 		addi $sp, $sp, 32
-		
-
 		
 		jr $ra
 		
