@@ -1,3 +1,6 @@
+
+# f10 is return registers
+
 .data
 	welcome:	.asciiz "Welcome!\n"
 	instructions:	.asciiz "0: Sine(x)\n1: Cosine(x)\n2: e^x\n3: ln(x)\n4: Factorial(x)\n5: Exponential(x)\n-1: quit\n"
@@ -19,8 +22,12 @@
 	
 	zeroDouble:	.double	0.0
 	oneDouble: 	.double 1.0
+	negOneDouble:	.double -1.0
+	twoDouble: 	.double 2.0
 	piDouble: 	.double 3.1415927
 	oneEightyDouble: .double 180.0
+	
+	termCountDouble: .double 10.0
 .text
 	# set the stack pointer to a multiple of 8
 	andi $sp, $sp, 0xfffffff8
@@ -78,6 +85,13 @@
 		j endoperation
 
 	handleSine:
+		addi $sp, $sp, -40
+		lw $s0, 0($sp)
+		sdc1 $f4, 8($sp)
+		sdc1 $f6, 16($sp)
+		sdc1 $f10, 24($sp)
+		
+
 		
 		la $a0, sinePrompt
 		jal printText
@@ -86,9 +100,61 @@
 		# convert $f0 degree into radians
 		jal convertDegRad
 		
+		# n = 0 start
+		ldc1 $f2, zeroDouble
+		
+		# loop bound
+		ldc1 $f4, termCountDouble
+		
+		# sum
+		ldc1 $f6, zeroDouble
+		
+		# the value 1
+		ldc1 $f10, oneDouble
+		
+		# store x
+		sdc1 $f0, 32($sp)
+
+		
+		sineLoop:
+			# if n >= termCount exit
+			c.le.d $f2, $f4
+			# x is $f0, n is $f2s
+			# load x:
+			ldc1 $f0, 32($sp)
+			bc1f sineLoopExit
+			# get sine term in $f0
+			jal getSineTerm
+			#jal printDouble
+			#jal printNewLine
+			# add to sum
+			add.d $f6, $f6, $f0
+			
+			# n += 1
+			add.d $f2, $f2, $f10
+			j sineLoop
+			
+		sineLoopExit:
+		mov.d $f0, $f6
+		jal printDouble
+		jal printNewLine
+
+
+		
+		lw $s0, 0($sp)
+		ldc1 $f4, 8($sp)
+		ldc1 $f6, 16($sp)
+		ldc1 $f8, 24($sp)
+		
+		ldc1 $f0, 32($sp)
+		addi $sp, $sp, 40
+		
 		j endoperation
 	
 	handleExp:
+		addi $sp,$sp, -16
+		sdc1 $f2, 0($sp)
+		
 		la $a0, expPrompt
 		jal printText
 		
@@ -112,13 +178,79 @@
 		# print the double x^n
 		jal printNewLine
 		
+		lwc1 $f2, 0($sp)
+		addi $sp, $sp, 8
+		
 		j endoperation
 	
 	getSineTerm:
+		addi $sp, $sp, -32
+		sw $ra, 0($sp)
+		sdc1 $f0, 8($sp)
+		sdc1 $f2, 16($sp)
+		sdc1 $f10, 24($sp)
+	
 		# gets a term for the sin T series
+		# x = $f0, n = $f2
+		# return in $f0
+		
+		# (-1)^n * x^(2n+1) / (2n+1)!
+		
+		# exp: $f0 is x, $f2 is n
+		ldc1 $f0, negOneDouble
+
+		
+		# -1^n in $f0
+		jal doubleExp
+
+		
+		# get 2
+		ldc1 $f10, twoDouble
+		# get 2n
+		mul.d $f2, $f2, $f10
+		# get one
+		ldc1 $f10, oneDouble
+		# compute 2n+1
+		add.d $f2, $f2, $f10
+		
+		# move -1^n to $f10 for storage
+		mov.d $f10, $f0
+
+
+		# call x^2n+1, note $f10 is 2n+1 already.Just load x from prior
+		ldc1 $f0, 8($sp)
+
+		jal doubleExp
+
+
+		# mult -1^n times x^(2n+1). Now we have the numerator!
+		mul.d $f10, $f10,$f0
+
+
+
+	
+		# recall $f2 has (2n+1)
+		# thus just get the factorial of that
+		# factorial argument in $f0, return $f0
+		# numerator in $f4
+		mov.d $f0, $f2
+		jal doubleFact
+	
+	
+
+		# now just divide!
+		div.d $f0, $f10, $f0
+
+	
+		lw $ra, 0($sp)
+		#ldc1 $f0, 8($sp)
+		ldc1 $f2, 16($sp)
+		ldc1 $f10, 24($sp)
+		
+		addi $sp, $sp, 32
+		
 		jr $ra
-	getExponent:
-		jr $ra
+		
 		
 	handleCosine:
 		
@@ -156,7 +288,7 @@
 	getDouble:
 		# returns a double in $f0
 	
-		# get the double, store in $f0
+		# get the double, store in $f10
 		li $v0, 7
 		syscall
 		
@@ -186,11 +318,13 @@
 		# for(int i=1;i<=n;i++){
 		# res *= x
 		
+		# WSDC1 NOT SWC1!!!
+		
 		addi $sp, $sp, -32
 		sw $ra, 0($sp)
-		swc1 $f4, 8($sp)
-		swc1 $f6, 16($sp)
-		swc1 $f8, 24($sp)
+		sdc1 $f4, 8($sp)
+		sdc1 $f6, 16($sp)
+		sdc1 $f8, 24($sp)
 		
 		
 		# int i=1
@@ -218,11 +352,14 @@
 		doubleExpLoopEnd: mov.d $f0, $f8
 			
 		# NOTE: use ldc1!
+		
 		lw $ra, 0($sp)
 		ldc1 $f4, 8($sp)
 		ldc1 $f6, 16($sp)
 		ldc1 $f8, 24($sp)
 		addi $sp, $sp, 32
+		
+
 		
 		jr $ra
 		
@@ -261,7 +398,6 @@
 		ldc1 $f4, zeroDouble
 		
 		add.d $f0, $f6, $f4
-		# return $f0 = $f8
 		
 		lw $ra, 0($sp)
 		ldc1 $f2, 8($sp)
@@ -272,6 +408,7 @@
 		jr $ra
 		
 	convertDegRad:
+		# read in $f0, out in $f0
 		addi $sp, $sp, -24
 		sw $ra, 0($sp)
 		sdc1 $f10, 8($sp)
