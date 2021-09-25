@@ -1,9 +1,6 @@
-
-# f10 is return registers
-
 .data
 	welcome:	.asciiz "Welcome!\n"
-	instructions:	.asciiz "0: Sine(x)\n1: Cosine(x)\n2: e^x\n3: ln(x)\n4: Factorial(x)\n5: Exponential(x)\n-1: quit\n"
+	instructions:	.asciiz "0: Sine(x)\n1: Cosine(x)\n2: e^x\n3: Factorial(x)\n4: Exponential(x)\n-1: quit\n"
 	goodbye:	.asciiz "\nGoodbye!"
 	radConversion:	.asciiz "In radians, this is: "
 	newLine:	.asciiz "\n"
@@ -11,14 +8,17 @@
 	degPrompt:	.asciiz "Enter a degree amount:\n"
 	sinePrompt:	.asciiz "Welcome to sine.\n"
 	cosinePrompt:	.asciiz "Welcome to cosine.\n"
-	ePrompt:	.asciiz "Welcome to e.\n"
-	lnPrompt:	.asciiz "Welcome to ln.\n"
+	ePrompt:	.asciiz "Welcome to e^x.\n"
 	factPrompt:	.asciiz "Enter an integer for the factorial: "
 	expPrompt:	.asciiz "This function returns x^n.\n"
 	getXPrompt:	.asciiz "Enter a double for x: "
 	getNPrompt:	.asciiz "Enter an integer for n: "
 	
 	factOutput:	.asciiz "The factorial is: "
+	sineOutput:	.asciiz "The sine is: "
+	cosineOutput:	.asciiz "The cosine is: "
+	exponentiationOutput:	.asciiz "The exponentiation is: "
+	eOutput:	.asciiz "The e^x value is: "
 	
 	zeroDouble:	.double	0.0
 	oneDouble: 	.double 1.0
@@ -27,7 +27,7 @@
 	piDouble: 	.double 3.1415927
 	oneEightyDouble: .double 180.0
 	
-	termCountDouble: .double 10.0
+	termCountDouble: .double 100.0
 .text
 	# set the stack pointer to a multiple of 8
 	andi $sp, $sp, 0xfffffff8
@@ -52,12 +52,9 @@
 			beq $t0, $v0, handleE
 			
 			li $t0, 3
-			beq $t0, $v0, handleLn
-			
-			li $t0, 4
 			beq $t0, $v0, handleFact
 			
-			li $t0, 5
+			li $t0, 4
 			beq $t0, $v0, handleExp
 		
 			li $t0, -1
@@ -136,10 +133,11 @@
 			
 		sineLoopExit:
 		mov.d $f0, $f6
+		
+		la $a0, sineOutput
+		jal printText
 		jal printDouble
 		jal printNewLine
-
-
 		
 		lw $s0, 0($sp)
 		ldc1 $f4, 8($sp)
@@ -174,6 +172,8 @@
 		
 		jal doubleExp
 		# print the exp
+		la $a0, exponentiationOutput
+		jal printText
 		jal printDouble
 		# print the double x^n
 		jal printNewLine
@@ -254,29 +254,235 @@
 		
 	handleCosine:
 		
+		addi $sp, $sp, -40
+		lw $s0, 0($sp)
+		sdc1 $f4, 8($sp)
+		sdc1 $f6, 16($sp)
+		sdc1 $f10, 24($sp)
+		
+
+		
 		la $a0, cosinePrompt
 		jal printText
-		
+		# get the degree in $f0
 		jal getDegree
 		# convert $f0 degree into radians
 		jal convertDegRad
 		
-		j endoperation
+		# n = 0 start
+		ldc1 $f2, zeroDouble
+		
+		# loop bound
+		ldc1 $f4, termCountDouble
+		
+		# sum
+		ldc1 $f6, zeroDouble
+		
+		# the value 1
+		ldc1 $f10, oneDouble
+		
+		# store x
+		sdc1 $f0, 32($sp)
+
+		
+		cosLoop:
+			# if n >= termCount exit
+			c.le.d $f2, $f4
+			# x is $f0, n is $f2s
+			# load x:
+			ldc1 $f0, 32($sp)
+			bc1f cosLoopExit
+			# get cosine term in $f0
+			jal getCosineTerm
+			#jal printDouble
+			#jal printNewLine
+			# add to sum
+			add.d $f6, $f6, $f0
 			
-	handleLn:
+			# n += 1
+			add.d $f2, $f2, $f10
+			j cosLoop
+			
+		cosLoopExit:
+		mov.d $f0, $f6
 		
-		la $a0, lnPrompt
+		la $a0, cosineOutput
 		jal printText
+		jal printDouble
+		jal printNewLine
+		
+		lw $s0, 0($sp)
+		ldc1 $f4, 8($sp)
+		ldc1 $f6, 16($sp)
+		ldc1 $f8, 24($sp)
+		
+		ldc1 $f0, 32($sp)
+		addi $sp, $sp, 40
 		
 		j endoperation
+		
+	getCosineTerm:
+		addi $sp, $sp, -32
+		sw $ra, 0($sp)
+		sdc1 $f0, 8($sp)
+		sdc1 $f2, 16($sp)
+		sdc1 $f10, 24($sp)
+	
+		# gets a term for the cos T series
+		# x = $f0, n = $f2
+		# return in $f0
+		
+		# (-1)^n * x^(2n) / (2n)!
+		
+		# exp: $f0 is x, $f2 is n
+		ldc1 $f0, negOneDouble
+
+		
+		# -1^n in $f0
+		jal doubleExp
+
+		
+		# get 2
+		ldc1 $f10, twoDouble
+		# get 2n
+		mul.d $f2, $f2, $f10
+		
+		# move -1^n to $f10 for storage
+		mov.d $f10, $f0
+
+
+		# call x^2n, note $f10 is 2n already.Just load x from prior
+		ldc1 $f0, 8($sp)
+
+		jal doubleExp
+
+
+		# mult -1^n times x^(2n). Now we have the numerator!
+		mul.d $f10, $f10,$f0
+
+
+
+	
+		# recall $f2 has (2n)
+		# thus just get the factorial of that
+		# factorial argument in $f0, return $f0
+		# numerator in $f4
+		mov.d $f0, $f2
+		jal doubleFact
+	
+	
+
+		# now just divide!
+		div.d $f0, $f10, $f0
+
+	
+		lw $ra, 0($sp)
+		#ldc1 $f0, 8($sp)
+		ldc1 $f2, 16($sp)
+		ldc1 $f10, 24($sp)
+		
+		addi $sp, $sp, 32
+		
+		jr $ra
+			
 			
 	handleE:
 		
-		la $a0, ePrompt
-		jal printText
+		addi $sp, $sp, -40
+		lw $s0, 0($sp)
+		sdc1 $f4, 8($sp)
+		sdc1 $f6, 16($sp)
+		sdc1 $f10, 24($sp)
+		
 
 		
+		la $a0, ePrompt
+		jal printText
+		# get the x
+		la $a0, getXPrompt
+		jal printText
+		jal getDouble
+		
+		# n = 0 start
+		ldc1 $f2, zeroDouble
+		
+		# loop bound
+		ldc1 $f4, termCountDouble
+		
+		# sum
+		ldc1 $f6, zeroDouble
+		
+		# the value 1
+		ldc1 $f10, oneDouble
+		
+		# store x
+		sdc1 $f0, 32($sp)
+
+		
+		eLoop:
+			# if n >= termCount exit
+			c.le.d $f2, $f4
+			# x is $f0, n is $f2s
+			# load x:
+			ldc1 $f0, 32($sp)
+			bc1f eLoopExit
+			# get cosine term in $f0
+			jal getETerm
+			#jal printDouble
+			#jal printNewLine
+			# add to sum
+			add.d $f6, $f6, $f0
+			
+			# n += 1
+			add.d $f2, $f2, $f10
+			j eLoop
+			
+		eLoopExit:
+		mov.d $f0, $f6
+		
+		la $a0, eOutput
+		jal printText
+		jal printDouble
+		jal printNewLine
+		
+		lw $s0, 0($sp)
+		ldc1 $f4, 8($sp)
+		ldc1 $f6, 16($sp)
+		ldc1 $f8, 24($sp)
+		
+		ldc1 $f0, 32($sp)
+		addi $sp, $sp, 40
+		
 		j endoperation
+		
+	getETerm:
+		addi $sp, $sp, -16
+		sw $ra, 0($sp)
+		sdc1 $f4, 8($sp)
+		
+		# call x ^ n
+		# x in f0, n in f2 already
+		jal doubleExp
+		# now f0 = x^n
+		# move f0 to $f4 for storage
+		
+		mov.d $f4,$f0
+		
+		# get n!
+		# fact's arg is $f0, move n into f0
+		mov.d $f0, $f2
+		
+		jal doubleFact
+		# now n! in $f0
+		
+		# just divide!
+		div.d $f0, $f4, $f0
+		
+		lw $ra, 0($sp)
+		ldc1 $f4, 8($sp)
+		addi $sp, $sp, 16
+		
+		jr $ra
 		
 	getInt:
 		# get the int,  store in $v0 
@@ -414,9 +620,6 @@
 		sdc1 $f10, 8($sp)
 		sdc1 $f12, 16($sp)
 		
-		la $a0, radConversion
-		jal printText
-		
 		ldc1 $f10, piDouble
 		# rad = (pi/180)*deg
 		
@@ -427,12 +630,6 @@
 		# 1/180
 		div.d $f0, $f0, $f10
 		
-		li $v0, 3
-		ldc1 $f10, zeroDouble
-		add.d $f12, $f0, $f10
-		syscall
-		
-		jal printNewLine
 		
 		lw $ra, 0($sp)
 		ldc1 $f10,8($sp)
