@@ -1,5 +1,4 @@
-# MIPS T Series
-## Using T series of functions in MIPS
+# Assembly Scientific Calculator
 
 ## :cinema: Video:
 * https://youtu.be/4X8chf5pRoI
@@ -8,4 +7,7 @@
 * A program in MIPS to find sine, cosine, and e^x.
 
 :exclamation: Note:
-* MIPS!
+* In MIPS.
+
+## ❤️ How to Support ❤️
+- If this code or anyother I have written has helped you, feel free to make a donation at https://www.buymeacoffee.com/whalenlexn.
